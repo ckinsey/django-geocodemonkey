@@ -7,7 +7,7 @@ import re
 import logging
 
 
-class BaseCubeBumGeocoder(object):
+class BaseGeocoder(object):
     """
     Handles the basic geocoder features like cache managment and returning
     normalized data structures.
@@ -52,14 +52,14 @@ class BaseCubeBumGeocoder(object):
         raise NotImplementedError
 
 
-class GoogleGeocoder(BaseCubeBumGeocoder):
+class GoogleGeocoder(BaseGeocoder):
 
     def _geocode(self, address):
         qa, lat_long = google_v3(address)
         return qa, lat_long
 
 
-class GeocoderUSGeocoder(BaseCubeBumGeocoder):
+class GeocoderUSGeocoder(BaseGeocoder):
 
     def _geocode(self, address):
         r = requests.get("http://rpc.geocoder.us/service/csv?address=%s" % (address))
@@ -67,16 +67,3 @@ class GeocoderUSGeocoder(BaseCubeBumGeocoder):
             segments = r.text.split(',')
             qa = ", ".join(segments[2:])
             return qa, (segments[0], segments[1])
-
-
-def get_geocoder():
-    from django.conf import settings
-    from django.core.exceptions import ImproperlyConfigured
-
-    try:
-        module = __import__('cubebum')
-        g_klass = getattr(module.geocoders, settings.CUBEBUM_GEOCODER)
-        return g_klass
-    except AttributeError:
-        raise ImproperlyConfigured("Please define a valid geocoder class in the CUBEBUM_GEOCODER setting")
-
