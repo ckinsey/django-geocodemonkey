@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.encoding import smart_str
+from django.utils.timezone import now
 from geopy import geocoders as geopy_geocoders
 from geopy.exc import GeocoderServiceError
 
@@ -84,6 +85,7 @@ class GeocodeMonkeyGeocoder(object):
         instance.qualified_address = qa
         instance.latitude = lat_long[0]
         instance.longitude = lat_long[1]
+        instance.geocoded = now()
 
         if commit:
             instance.save()

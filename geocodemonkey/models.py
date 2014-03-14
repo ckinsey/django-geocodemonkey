@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class GeocodedObjectMixin(object):
     """
     This mixin is intended to be dropped on a model for easy storage of geocoder results
@@ -30,10 +31,22 @@ class GeocodedObjectMixin(object):
 
         super(GeocodedObjectMixin, self).save(*args, **kwargs)
 
-    def _geocode(self):
+    def get_geocoding_query(self):
+        """
+        Generate the address used to geocode an instance of this model.  If only one field is specified in
+        auto_geocode_on_update, assumes this field can be used as a standalone query.  If more than one field is
+        specified, child classes must override this method to generate a Geocoder compatible
+        """
+        if len(self.auto_geocode_on_update) == 1:
+            return getattr(self, self.auto_geocode_on_update[0])
+
+        raise NotImplementedError("Child classes of GeocodedObjectMixin must implement a get_geocoding_query method"
+            " if more than one field is specified in auto_geocode_on_update.")
+
+    def _geocode(self, geocoder=None):
         """
         Reaches out to the default Geocoder and does its thing.
         """
         get_geocoder = __import__('geocodemonkey').get_geocoder
-        g = get_geocoder()
-        g.geocode_to_model_instance(self.get_geocoding_address, self, commit=False)
+        g = get_geocoder(geocoder)
+        g.geocode_to_model_instance(self.get_geocoding_query(), self, commit=False)
