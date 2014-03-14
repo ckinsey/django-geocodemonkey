@@ -39,6 +39,9 @@ class GeocodeMonkeyGeocoder(object):
         # Sets the class to be used for geocoding.  args[0] should be dict from the GEOCODERS setting
         self.geocoder_class = getattr(geopy_geocoders, args[0]['BACKEND'])
 
+        # Set whether or not this is an asynchronous geocoder
+        self.ASYNC = args[0].get('ASYNC', False)
+
         self.qualified_address = ""
         self.lat = None
         self.long = None
@@ -79,8 +82,18 @@ class GeocodeMonkeyGeocoder(object):
         It is expected that the instance inhertis from geocodemonkey.models.GeocodedObjectMixin
         """
         if not isinstance(instance, geo_model):
-            raise TypeError("Instance argument is expected to be derived from geocodemonkey.models.GeocodedObjectMixin")
+            raise TypeError("Instance argument is expected to be derived from geocodemonkey.models.GeocodedModel base class")
 
+        # If this is an async Geocoder, we want to perform this asynchronously
+        if self.ASYNC:
+            from celery.app import Celery
+            # Always commit on async
+            celery = Celery()
+            return celery.task(args=[self._geocode_to_model_instance(address, instance, commit=True)])
+        else:
+            return self._geocode_to_model_instance(address, instance, commit=commit)
+
+    def _geocode_to_model_instance(self, address, instance, commit):
         qa, lat_long = self.geocode(address)
         instance.qualified_address = qa
         instance.latitude = lat_long[0]
