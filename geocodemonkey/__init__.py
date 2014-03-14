@@ -9,7 +9,7 @@ from django.utils.timezone import now
 from geopy import geocoders as geopy_geocoders
 from geopy.exc import GeocoderServiceError
 
-from models import GeocodedObjectMixin as geo_mixin
+from models import GeocodedModel as geo_model
 
 
 def get_geocoder(geocoder=None):
@@ -48,7 +48,7 @@ class GeocodeMonkeyGeocoder(object):
         Normalizes addresses for more effective caching
         """
 
-        return re.sub(r'[^a-z0-9]', '', address.lower())
+        return re.sub(r'[^a-z0-9]', '', str(address).lower())
 
     def store_geocoded_address(self, qa, lat, long):
         self.qualified_address = qa
@@ -78,7 +78,7 @@ class GeocodeMonkeyGeocoder(object):
         Performs a geocoding and saves it to the instance that was passed in.
         It is expected that the instance inhertis from geocodemonkey.models.GeocodedObjectMixin
         """
-        if not isinstance(instance, geo_mixin):
+        if not isinstance(instance, geo_model):
             raise TypeError("Instance argument is expected to be derived from geocodemonkey.models.GeocodedObjectMixin")
 
         qa, lat_long = self.geocode(address)

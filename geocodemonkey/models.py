@@ -1,17 +1,20 @@
 from django.db import models
 
 
-class GeocodedObjectMixin(object):
+class GeocodedModel(models.Model):
     """
     This mixin is intended to be dropped on a model for easy storage of geocoder results
     """
+
+    class Meta:
+        abstract = True
 
     # A list of fields that should trigger a re-geocoding
     auto_geocode_on_update = []
 
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
-    qualified_address = models.CharField(max_length=256)
+    qualified_address = models.CharField(max_length=256, null=True, blank=True)
 
     # Functions as a flag for whether or not item has been geocoded.
     # Can also be used to programatically update old geo data
@@ -19,7 +22,7 @@ class GeocodedObjectMixin(object):
 
     def __init__(self, *args, **kwargs):
         self._geocode_concerns = {}
-        super(GeocodedObjectMixin, self).__init__(*args, **kwargs)
+        super(GeocodedModel, self).__init__(*args, **kwargs)
         for concern in self.auto_geocode_on_update:
             # store the original value on init
             self._geocode_concerns[concern] = getattr(self, concern)
@@ -29,7 +32,7 @@ class GeocodedObjectMixin(object):
             if getattr(self, concern) != self._geocode_concerns[concern]:
                 self._geocode()
 
-        super(GeocodedObjectMixin, self).save(*args, **kwargs)
+        super(GeocodedModel, self).save(*args, **kwargs)
 
     def get_geocoding_query(self):
         """
