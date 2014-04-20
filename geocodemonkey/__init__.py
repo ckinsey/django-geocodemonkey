@@ -29,6 +29,13 @@ def get_geocoder(geocoder=None):
             "GEOCODERS setting" % geocoder)
 
 
+class GeocodeFailed(Exception):
+    """
+    Raised when a query was not geocodable
+    """
+    pass
+
+
 class GeocodeMonkeyGeocoder(object):
     """
     Handles the basic geocoder features like cache management and returning
@@ -62,19 +69,21 @@ class GeocodeMonkeyGeocoder(object):
         # check the cache first
         key = self._generate_cache_key(address)
         cached_geocode = cache.get(key)
-        if cached_geocode:
-            self.store_geocoded_address(cached_geocode[0], cached_geocode[1], cached_geocode[2])
-            logging.debug("Address %s geocoded from cache with key %s" % (address, key))
-        else:
-            qa, lat_long = self._geocode(address)
-            cache.set(key, (qa, lat_long[0], lat_long[1]), None)
-            self.store_geocoded_address(qa, lat_long[0], lat_long[1])
-            logging.debug("Address %s geocoded from web API and stored with key %s" % (address, key))
 
-        if self.lat and self.long:
-            return self.qualified_address, (self.lat, self.long)
-        else:
-            raise LookupError("Geocoder %s did not return an address for %s" % (self.__class__, address))
+        try:
+            if cached_geocode:
+                self.store_geocoded_address(cached_geocode[0], cached_geocode[1], cached_geocode[2])
+                logging.debug("Address %s geocoded from cache with key %s" % (address, key))
+            else:
+                qa, lat_long = self._geocode(address)
+                cache.set(key, (qa, lat_long[0], lat_long[1]), None)
+                self.store_geocoded_address(qa, lat_long[0], lat_long[1])
+                logging.debug("Address %s geocoded from web API and stored with key %s" % (address, key))
+
+        except GeocodeFailed:
+            raise LookupError("Geocoder %s did not return an address for %s" % (self.geocoder_class, address))
+
+        return self.qualified_address, (self.lat, self.long)
 
     def geocode_to_model_instance(self, address, instance, commit=True):
         """
@@ -112,6 +121,10 @@ class GeocodeMonkeyGeocoder(object):
         try:
             g = self.geocoder_class()
             address = smart_str(address)
-            return g.geocode(address, exactly_one=False)[0]
+            result = g.geocode(address, exactly_one=False)
+            if result:
+                return result[0]
+            else:
+                raise GeocodeFailed()
         except (UnboundLocalError, ValueError, GeocoderServiceError) as e:
             raise Exception(e)

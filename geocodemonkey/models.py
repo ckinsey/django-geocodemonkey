@@ -31,6 +31,7 @@ class GeocodedModel(models.Model):
         for concern in self.auto_geocode_on_update:
             if getattr(self, concern) != self._geocode_concerns[concern]:
                 self._geocode()
+                break
 
         super(GeocodedModel, self).save(*args, **kwargs)
 
